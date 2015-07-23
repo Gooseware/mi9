@@ -1,5 +1,4 @@
-var m2 = require('m2njs'),
-    express = require('express'),
+var express = require('express'),
     _ = require('lodash'),
     multer = require('multer'),
     bodyParser = require('body-parser'),
@@ -10,22 +9,22 @@ var app = express();
 /**/
 app.set('view engine','jade');
 app.use(bodyParser.json());
-
-
-
-app.get('/',function(req,res){
-    res.render('index',{pageTitle:'Welcome mi9'});
+app.use(function(error,req,res,next){
+    if (error instanceof SyntaxError){
+        res.status(400).json({"error":"Could not decode request: JSON parsing failed"});
+    }else{
+        next();
+    }
 });
 
-app.post('/',upload.single('file'),function(req,res,next){
-    var send = {"error": "Something happened that I could not handle properly"};
+app.all('/',upload.single('file'),function(req,res,next){
+    var send = {"error":"Could not decode request: JSON parsing failed"};
     var errJSON = {"error":"Could not decode request: JSON parsing failed"};
     var data = {};
     if(typeof req.file != "undefined"){
-        console.log("file");
         fs.exists(req.file.path,function(exists){
             fs.readFile(req.file.path,'utf8',function(err,readFile){
-                if (err) res.json(send);
+                if (err) res.status(400).type('application/json').json(send);
                 jsonParser(readFile,res,req,errJSON);
                 fs.unlink(req.file.path,function(err){
                     if(err) throw err;
@@ -34,30 +33,43 @@ app.post('/',upload.single('file'),function(req,res,next){
             });
         });
     }else if(typeof req.body != 'undefined'){
-        console.log(req.body);
         jsonParser(req.body,res,req,errJSON);
     }else{
-        res.json(send);
+        res.status(400).type('application/json').json(send);
     }
 });
 
 function jsonParser(json,res,req,errJSON){
     try{
-
+        console.log('json');
         json = (typeof json == 'string')? JSON.parse(json):json;
-        var mustkey = ["image","slug","title"];
-        var response = [];
-        for(item in json.payload){
-            i = response.length;
-            response[i] = _.pick(json.payload[item],mustkey);
-            if(typeof response[i].image!="undefined"  && typeof response[i].image.showImage!="undefined"){
-                response[i].image = response[i].image.showImage;
+        if(typeof json.payload != 'undefined'){
+            var mustkey = ["image","slug","title"];
+            var response = [];
+            var i =0;
+            for(item in json.payload){
+                var pick = _.pick(json.payload[item],mustkey);
+                var cur = response.length;
+                if(Object.keys(pick).length>0 && json.payload[i].drm == true && json.payload[i].episodeCount>0){
+                    response[cur] = pick;
+                    if(typeof response[cur].image!="undefined"  && typeof response[cur].image.showImage!="undefined"){
+                        response[cur].image = response[cur].image.showImage;
+                    }
+                }
+                i++;
             }
+            res.json({response:response});
+        }else{
+            res.status(400).type('application/json').json(errJSON);
         }
-        res.json({response:response});
     }catch(e){
         res.json(errJSON);
     }
 }
+var server = app.listen(9002, function () {
+  var host = server.address().address;
+  var port = server.address().port;
 
+  console.log('mi9 app listening at http://%s:%s', host, port);
+});
 
