@@ -1,0 +1,14 @@
+doctype html
+html(lang=en)
+    head
+        title=pageTitle
+    body
+        h1 Hi mi9 welcome to my quick and dirty node.js app
+        h2 If you would like you can post to this page with the form included or you can send json directly to the app. i.e. curl -H "Content-Type: application/json" --data @path_to_payload_file http://mi9.gooseware.net:9002
+        h3 this application is housed in a docker container deployed to my CoreOs instance I am currently experimenting with Docker, CoreOs, Marathon and Mesos
+        form(action="" method="post" enctype="multipart/form-data")
+            .col
+                label(for="file") File:
+                input(type="file" name="file" id="file")
+            .col
+                button(type="submit" value="SEND" name="send") Send
